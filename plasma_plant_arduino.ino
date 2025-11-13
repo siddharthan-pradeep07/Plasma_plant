@@ -1,4 +1,4 @@
-//                    Code by Siddharthan🔥
+//                    Code by Siddharthan🔥🔥🔥
 #include <AFMotor.h>
 #include <Servo.h>
 #include <Wire.h>
@@ -94,7 +94,7 @@ void dispenseSeed(const char* type) {
     delay(300);
   } else {
     lcd.setCursor(0,0); lcd.print("UNKNOWN");
-    lcd.setCursor(0,1); lcd.print(" ");
+    lcd.setCursor(0,1); lcd.print("Check the soil!");
     // Do nothing else
   }
 }
@@ -132,6 +132,7 @@ void forward() {
   motor2.run(BACKWARD);
   motor3.run(BACKWARD);
   motor4.run(BACKWARD);
+  
   motor1.setSpeed(200); 
   motor2.setSpeed(200);
   motor3.setSpeed(200); 
@@ -152,6 +153,7 @@ void uTurnLeft() {
   motor2.run(FORWARD);
   motor3.run(BACKWARD); 
   motor4.run(BACKWARD);
+  
   motor1.setSpeed(100); 
   motor2.setSpeed(100); 
   motor3.setSpeed(100); 
@@ -168,10 +170,12 @@ void uTurnRight() {
   motor2.run(BACKWARD);
   motor3.run(FORWARD); 
   motor4.run(FORWARD);
+  
   motor1.setSpeed(100); 
   motor2.setSpeed(100); 
   motor3.setSpeed(100); 
   motor4.setSpeed(100);
+  
   delay(2200); 
   stopMotors();
 }
@@ -181,6 +185,7 @@ long readDistanceCM() {
   digitalWrite(TRIG_PIN, HIGH); 
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
+  
   long duration = pulseIn(ECHO_PIN, HIGH);
   long distance = duration * 0.034 / 2;
   return distance;
@@ -188,13 +193,17 @@ long readDistanceCM() {
 
 // Soil scan and seed select ONCE:
 void takeInitialSoilReadingsAndSeed() {
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Examining the");
+  lcd.setCursor(0,1);
+  lcd.print("soil...");
+  
   int soilType1Count = 0, soilType2Count = 0, soilType3Count = 0, unknownCount = 0;
-  const int N = 7;
+  const int N = 3; // Only 3 readings
   for(int i=0; i<N; i++) {
-    myservo.write(38);
-    forward(); 
-    delay(200); 
-    stopMotors();
+    myservo.write(38); // Park servo
+    // No forward or stopMotors calls, robot stays still
     uint16_t r, g, b, c;
     tcs.getRawData(&r, &g, &b, &c);
     float norm = c ? c : 1;
@@ -208,7 +217,7 @@ void takeInitialSoilReadingsAndSeed() {
     else if (strcmp(result, "Soil Type 2") == 0) soilType2Count++;
     else if (strcmp(result, "Soil Type 3") == 0) soilType3Count++;
     else unknownCount++;
-    delay(900);
+    delay(900); // Slight delay between readings for stability
   }
   int majorCount = soilType1Count;
   majorType = "Soil Type 1";
@@ -231,6 +240,7 @@ void takeInitialSoilReadingsAndSeed() {
   soilDetected = true;
 }
 
+
 void setup() {
   Serial.begin(9600); 
   myservo.attach(10);
@@ -238,11 +248,14 @@ void setup() {
   motor2.setSpeed(Speed); 
   motor3.setSpeed(Speed); 
   motor4.setSpeed(Speed);
+  
   pinMode(ECHO_PIN, INPUT); 
   pinMode(TRIG_PIN, OUTPUT); 
   pinMode(IR_PIN, INPUT); 
   pinMode(RELAY_PIN, OUTPUT);
+  pinMode(13, OUTPUT);
   digitalWrite(RELAY_PIN, HIGH);
+  
   lcd.init(); 
   lcd.backlight();
   lcd.clear();
@@ -255,12 +268,15 @@ void setup() {
 }
 
 void loop() {
+  digitalWrite(13, HIGH);  // turn LED on
+  delay(150);              // LED on for 150ms
+  digitalWrite(13, LOW);   // turn LED off
+  delay(150);     
   if (!soilDetected) {
     takeInitialSoilReadingsAndSeed();
     return;
   }
-
-  // Normal operation -- dispense seed/water, move, IR/US detect
+// Normal operation -- dispense seed/water, move, IR/US detect
   forward();
   delay(200);
   dispenseSeed(majorType);
@@ -270,7 +286,7 @@ void loop() {
   if (ir_value == LOW) {
     stopMotors();
     lcd.setCursor(0, 1); 
-    lcd.print("IR Detected!   ");
+    lcd.print("Roof Detected!   ");
     while (digitalRead(IR_PIN) == LOW) { delay(10); }
     lcd.setCursor(0, 1); 
     lcd.print("                ");
@@ -283,6 +299,7 @@ void loop() {
   if (dist <= 10) {
     stopMotors(); 
     delay(150);
+    
     if (turnState == 0) { uTurnLeft(); turnState = 1; }
     else { uTurnRight(); 
     turnState = 0; }
@@ -290,3 +307,5 @@ void loop() {
     while (readDistanceCM() <= 10) { delay(50); }
   }
 }
+
+
